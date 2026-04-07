@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+.vscode/
+.nuget/
+*.user
+*.suo
+*.pdb
