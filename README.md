@@ -9,8 +9,8 @@ It runs on Windows and Linux.
 ## Install
 
 1. Open the [Releases page](https://github.com/darthsalad/TransparentPrompterOverlay/releases) and download one of these:
-   - `Transparent Prompter Overlay Setup 1.0.0.exe` installs the app with a Start menu shortcut.
-   - `Transparent Prompter Overlay 1.0.0.exe` is portable: it runs without installing.
+   - `Transparent.Prompter.Overlay.Setup.1.0.0.exe` installs the app with a Start menu shortcut.
+   - `Transparent.Prompter.Overlay.1.0.0.exe` is portable: it runs without installing.
 2. Run it. The app is not code-signed, so Windows SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**.
 
 To run from source instead, see [Run from source](#run-from-source).
