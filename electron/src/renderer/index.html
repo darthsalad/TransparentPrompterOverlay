@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+    <title>Transparent Prompter Overlay</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="vendor/vosk.js"></script>
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+<div class="glass" id="glass">
+    <div class="minimal-handle" title="Drag to move">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <circle cx="3" cy="3" r="1.2"/><circle cx="9" cy="3" r="1.2"/>
+            <circle cx="3" cy="9" r="1.2"/><circle cx="9" cy="9" r="1.2"/>
+        </svg>
+    </div>
+    <button type="button" class="minimal-restart" id="minimalRestartButton" title="Start over from the top">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M2.5,6 A3.5,3.5 0 1 0 3.6,3.4 M1.8,1.2 V3.8 H4.4"/>
+        </svg>
+    </button>
+    <button type="button" class="minimal-exit" id="exitMinimalButton" title="Exit minimal mode">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="M1,4 V1 H4 M8,1 H11 V4 M11,8 V11 H8 M4,11 H1 V8"/>
+        </svg>
+    </button>
+    <header class="header">
+        <div class="drag-card">
+            <div class="drag-title">Teleprompter Overlay</div>
+            <div class="drag-hint">Drag here to move the overlay.</div>
+            <div class="drag-subtitle">Glass-style prompt stage with manual, timed, and voice-follow modes.</div>
+        </div>
+
+        <div class="badges">
+            <span class="badge badge-strong" id="modeBadge"></span>
+            <span class="badge" id="playbackBadge"></span>
+            <span class="badge badge-wrap">Ctrl+Shift + F8 click-through • F9 show/hide • F10 play • F11/F12 adjust</span>
+        </div>
+
+        <div class="header-actions">
+            <button type="button" id="toggleClickThroughButton"></button>
+            <button type="button" id="minimalButton">Minimal mode</button>
+            <button type="button" id="hideButton">Hide</button>
+            <button type="button" id="resetButton">Reset</button>
+            <button type="button" id="closeButton">Close</button>
+        </div>
+    </header>
+
+    <main class="body">
+        <aside class="sidebar">
+            <section class="card">
+                <h2>Playback</h2>
+                <p class="card-hint">Choose how the script moves.</p>
+
+                <label class="label" for="modeSelect">Scroll mode</label>
+                <select id="modeSelect">
+                    <option value="manual">Manual</option>
+                    <option value="timed">Timed</option>
+                    <option value="voiceFollow">Voice-follow</option>
+                </select>
+
+                <div class="row">
+                    <button type="button" id="playbackButton"></button>
+                    <button type="button" id="restartButton">Restart from top</button>
+                </div>
+
+                <p class="status" id="playbackStatus"></p>
+                <p class="status-muted" id="voiceStatus"></p>
+            </section>
+
+            <section class="card">
+                <h2>Speed and Timing</h2>
+                <p class="card-hint">Manual mode uses pixels per second. Timed mode finishes within your target time.</p>
+
+                <label class="label" for="manualSpeedSlider">Manual speed</label>
+                <div class="slider-row">
+                    <input type="range" id="manualSpeedSlider" min="10" max="220" step="1">
+                    <span id="manualSpeedValue"></span>
+                </div>
+
+                <div class="row">
+                    <button type="button" id="fasterButton">Faster</button>
+                    <button type="button" id="slowerButton">Slower</button>
+                </div>
+
+                <label class="label spaced" for="timedDurationInput">Timed duration (mm:ss)</label>
+                <input type="text" id="timedDurationInput" class="duration-input" spellcheck="false">
+                <p class="status-muted" id="timedDurationHelper"></p>
+            </section>
+
+            <section class="card">
+                <h2>Visuals</h2>
+                <p class="card-hint">Keep the stage readable without blocking too much of your screen.</p>
+
+                <label class="label" for="opacitySlider">Overlay opacity</label>
+                <div class="slider-row">
+                    <input type="range" id="opacitySlider" min="0.12" max="0.78" step="0.01">
+                    <span id="opacityValue"></span>
+                </div>
+
+                <label class="label spaced" for="fontSizeSlider">Font size</label>
+                <div class="slider-row">
+                    <input type="range" id="fontSizeSlider" min="20" max="76" step="1">
+                    <span id="fontSizeValue"></span>
+                </div>
+
+                <label class="label spaced" for="textColorSelect">Text color</label>
+                <select id="textColorSelect">
+                    <option value="#F8FAFC">Studio White</option>
+                    <option value="#FDE68A">Soft Amber</option>
+                    <option value="#D1FAE5">Mint Glass</option>
+                    <option value="#BFDBFE">Sky Cue</option>
+                    <option value="#FBCFE8">Rose Cue</option>
+                    <option value="#CBD5E1">Slate Ink</option>
+                </select>
+
+                <label class="label spaced" for="alignmentSelect">Alignment</label>
+                <select id="alignmentSelect">
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                </select>
+
+                <label class="checkbox">
+                    <input type="checkbox" id="mirrorCheckbox">
+                    Mirror prompt text for reflective teleprompter glass
+                </label>
+            </section>
+
+            <section class="card">
+                <h2>Window</h2>
+                <p class="card-hint">Resize the overlay without turning it into a normal app window.</p>
+
+                <label class="label" for="widthSlider">Width</label>
+                <div class="slider-row">
+                    <input type="range" id="widthSlider" min="760" max="1600" step="1">
+                    <span id="widthValue"></span>
+                </div>
+
+                <label class="label spaced" for="heightSlider">Height</label>
+                <div class="slider-row">
+                    <input type="range" id="heightSlider" min="520" max="980" step="1">
+                    <span id="heightValue"></span>
+                </div>
+
+                <label class="checkbox">
+                    <input type="checkbox" id="hideFromCaptureCheckbox">
+                    Hide from screen sharing and recordings (Windows and macOS only)
+                </label>
+            </section>
+
+            <section class="card">
+                <h2>Rephrase Assistant</h2>
+                <p class="card-hint">Select text in the editor, or place the caret inside a paragraph, to generate easier-to-say alternatives.</p>
+
+                <button type="button" class="rephrase-button">Rephrase selection</button>
+                <p class="status-muted" id="rephraseStatus"></p>
+                <div id="rephraseSuggestions"></div>
+            </section>
+        </aside>
+
+        <section class="stage-column">
+            <div class="stage">
+                <div class="prompt" id="prompt"><div class="prompt-text" id="promptText" spellcheck="false"
+                     data-placeholder="Paste or type your script here."></div></div>
+            </div>
+
+            <div class="minimal-controls">
+                <label class="minimal-slider" title="Manual scroll speed">
+                    <input type="range" id="minimalSpeedSlider" min="10" max="220" step="1">
+                    <span id="minimalSpeedValue"></span>
+                </label>
+                <button type="button" class="play-button" id="minimalPlayButton" title="Play / pause">
+                    <svg class="icon-play" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M4,2 L14,8 L4,14 Z"/></svg>
+                    <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3,2 H6.5 V14 H3 Z M9.5,2 H13 V14 H9.5 Z"/></svg>
+                </button>
+                <label class="minimal-slider" title="Background opacity">
+                    <input type="range" id="minimalOpacitySlider" min="0.12" max="0.78" step="0.01">
+                    <span id="minimalOpacityValue"></span>
+                </label>
+            </div>
+
+            <div class="editor-panel" id="editorPanel">
+                <div class="editor-header">
+                    <div>
+                        <h2>Editable script</h2>
+                        <p class="card-hint">Type, paste, or revise your script here. The prompt stage above updates immediately.</p>
+                    </div>
+                    <button type="button" class="rephrase-button">Rephrase selection</button>
+                </div>
+                <textarea id="editor" spellcheck="true"
+                          placeholder="Paste or type your script. Select a tricky line or paragraph to get simpler phrasing suggestions."></textarea>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <span id="statusLine"></span>
+        <div class="resize-grip" id="resizeGrip" title="Drag to resize">
+            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+                <path d="M3,19 L19,3 M8,19 L19,8 M13,19 L19,13"/>
+            </svg>
+        </div>
+    </footer>
+</div>
+
+<template id="suggestionTemplate">
+    <div class="suggestion">
+        <div class="suggestion-title"></div>
+        <div class="suggestion-text"></div>
+        <button type="button">Use this version</button>
+    </div>
+</template>
+</body>
+</html>

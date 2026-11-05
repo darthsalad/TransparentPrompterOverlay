@@ -2,6 +2,8 @@
 
 A lightweight Windows teleprompter overlay built with WPF.
 
+A cross-platform Electron port (Windows and Linux) with the same features lives in [`electron/`](electron/README.md).
+
 ## Why WPF
 
 WPF is the best fit here because it gives reliable Windows-native support for:

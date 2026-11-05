@@ -1,0 +1,564 @@
+:root {
+    --font-ui: Bahnschrift, "Segoe UI Variable", "Segoe UI", "Inter", "Noto Sans", system-ui, sans-serif;
+    --font-prompt: "Bahnschrift SemiLight", Bahnschrift, "Segoe UI", "Inter", "Noto Sans", system-ui, sans-serif;
+    --overlay-bg: rgba(8, 14, 24, 0.28);
+    --prompt-color: #F8FAFC;
+    --prompt-size: 34px;
+    --prompt-align: center;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    color: #F8FAFC;
+    font-family: var(--font-ui);
+    user-select: none;
+}
+
+h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+p {
+    margin: 0;
+}
+
+.glass {
+    position: absolute;
+    inset: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: var(--overlay-bg);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.29);
+}
+
+/* Header */
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(5, 10, 22, 0.09);
+}
+
+.drag-card {
+    flex: 0 0 270px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(255, 255, 255, 0.09);
+    cursor: move;
+    -webkit-app-region: drag;
+}
+
+.drag-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.drag-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.drag-subtitle {
+    margin-top: 2px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.56);
+}
+
+.badges {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.badge-wrap {
+    white-space: normal;
+    border-radius: 12px;
+}
+
+.badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.09);
+    font-size: 11px;
+    color: #DDE7F4;
+    white-space: nowrap;
+}
+
+.badge-strong {
+    color: #FFFFFF;
+}
+
+.header-actions {
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+}
+
+/* Controls */
+
+button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.27);
+    background: rgba(52, 70, 90, 0.13);
+    color: #F8FAFC;
+    font: 12px var(--font-ui);
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+button:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+button:active {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+select,
+input[type="text"],
+textarea {
+    border: 1px solid rgba(255, 255, 255, 0.21);
+    background: rgba(26, 36, 53, 0.09);
+    color: #F8FAFC;
+    font: 12px var(--font-ui);
+    border-radius: 4px;
+    outline: none;
+}
+
+select {
+    min-width: 120px;
+    width: 100%;
+    padding: 6px 8px;
+}
+
+select option {
+    background: #1A2435;
+    color: #F8FAFC;
+}
+
+input[type="text"] {
+    padding: 7px 10px;
+}
+
+select:focus,
+input[type="text"]:focus,
+textarea:focus {
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+input[type="range"] {
+    flex: 1;
+    accent-color: #BFDBFE;
+}
+
+.checkbox {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #E5EDF7;
+    cursor: pointer;
+}
+
+.checkbox input {
+    margin: 1px 0 0;
+}
+
+/* Body */
+
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    gap: 16px;
+}
+
+.sidebar {
+    flex: 0 0 310px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.card {
+    margin-bottom: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(22, 33, 49, 0.13);
+}
+
+.card-hint {
+    margin: 4px 0 12px;
+    font-size: 12px;
+    color: #A7B5C9;
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: #D8E2F0;
+}
+
+.label.spaced {
+    margin-top: 10px;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-row span {
+    min-width: 52px;
+    font-size: 12px;
+    color: #FFFFFF;
+}
+
+.status {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #D8E2F0;
+}
+
+.status-muted {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #94A3B8;
+}
+
+.duration-input {
+    width: 120px;
+}
+
+.suggestion {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(30, 41, 59, 0.08);
+}
+
+.suggestion-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.suggestion-text {
+    margin: 8px 0 10px;
+    font: 12px var(--font-prompt);
+    color: #E2E8F0;
+    white-space: pre-wrap;
+    user-select: text;
+}
+
+/* Stage and editor */
+
+.stage-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.stage {
+    flex: 1;
+    min-height: 0;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(6, 12, 23, 0.06);
+    overflow: hidden;
+    container-type: size;
+}
+
+.prompt {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+    /* Up to half the stage of blank space so the first and last lines can be centered. */
+    padding: min(200px, 45cqh) 46px;
+    color: var(--prompt-color);
+    font: var(--prompt-size) var(--font-prompt);
+    line-height: 1.3;
+    text-align: var(--prompt-align);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.prompt::-webkit-scrollbar {
+    display: none;
+}
+
+.prompt.mirrored {
+    transform: scaleX(-1);
+}
+
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background: rgba(6, 12, 23, 0.08);
+}
+
+.editor-panel[hidden] {
+    display: none;
+}
+
+.editor-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.editor-header .card-hint {
+    margin-bottom: 0;
+}
+
+textarea {
+    height: 190px;
+    resize: none;
+    padding: 10px 12px;
+    font: 15px var(--font-prompt);
+    user-select: text;
+}
+
+textarea::placeholder {
+    color: rgba(216, 226, 240, 0.44);
+}
+
+textarea::selection {
+    background: rgba(255, 255, 255, 0.33);
+}
+
+/* Footer */
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    color: #D8E2F0;
+}
+
+.resize-grip {
+    flex: 0 0 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    opacity: 0.85;
+    -webkit-app-region: no-drag;
+}
+
+.resize-grip path {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.67);
+    stroke-width: 1.4;
+}
+
+/* Minimal mode: the stage fills the panel and becomes the editor. */
+
+.minimal-handle,
+.minimal-exit,
+.minimal-restart,
+.minimal-controls {
+    display: none;
+}
+
+.glass.minimal {
+    padding: 10px;
+    gap: 0;
+}
+
+.glass.minimal .header,
+.glass.minimal .sidebar,
+.glass.minimal .editor-panel,
+.glass.minimal #statusLine {
+    display: none;
+}
+
+.glass.minimal .stage-column {
+    gap: 8px;
+}
+
+.glass.minimal .stage {
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+}
+
+.glass.minimal .prompt {
+    padding-inline: 36px;
+}
+
+.glass.minimal .prompt-text[contenteditable="plaintext-only"] {
+    min-height: 1.3em;
+    outline: none;
+    cursor: text;
+    user-select: text;
+}
+
+.glass.minimal .prompt-text:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.45;
+}
+
+.glass.minimal .minimal-handle,
+.glass.minimal .minimal-exit,
+.glass.minimal .minimal-restart {
+    position: absolute;
+    top: 10px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.1);
+    opacity: 0.6;
+}
+
+.glass.minimal .minimal-handle:hover,
+.glass.minimal .minimal-exit:hover,
+.glass.minimal .minimal-restart:hover {
+    opacity: 1;
+}
+
+.minimal-handle {
+    left: 10px;
+    cursor: move;
+    -webkit-app-region: drag;
+}
+
+.minimal-handle circle {
+    fill: rgba(255, 255, 255, 0.8);
+}
+
+.minimal-exit {
+    right: 10px;
+}
+
+.glass.minimal .minimal-restart {
+    top: auto;
+    bottom: 18px;
+    left: 10px;
+}
+
+.minimal-exit path,
+.minimal-restart path {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.85);
+    stroke-width: 1.4;
+}
+
+.glass.minimal .minimal-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 0 40px 2px;
+}
+
+.minimal-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: min(180px, 32%);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.minimal-slider input {
+    width: 100%;
+}
+
+.minimal-slider:has(input:disabled) {
+    opacity: 0.4;
+}
+
+.play-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+.play-button path {
+    fill: #F8FAFC;
+}
+
+.play-button .icon-pause,
+.play-button.playing .icon-play {
+    display: none;
+}
+
+.play-button.playing .icon-pause {
+    display: block;
+}
+
+.glass.minimal .footer {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+}
+
+.glass.minimal.click-through .minimal-handle,
+.glass.minimal.click-through .minimal-exit,
+.glass.minimal.click-through .minimal-restart,
+.glass.minimal.click-through .minimal-controls {
+    opacity: 0.25;
+}

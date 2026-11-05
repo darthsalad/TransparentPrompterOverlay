@@ -1,0 +1,43 @@
+{
+  "name": "transparent-prompter-overlay",
+  "productName": "Transparent Prompter Overlay",
+  "version": "1.0.0",
+  "description": "Transparent always-on-top teleprompter overlay (Electron port).",
+  "main": "src/main.js",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "electron . --ozone-platform=x11",
+    "start:wayland": "electron . --ozone-platform=wayland --enable-features=GlobalShortcutsPortal",
+    "test": "node --test",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "build": {
+    "appId": "com.transparentprompter.overlay",
+    "files": [
+      "src/**/*",
+      "node_modules/vosk-browser/dist/vosk.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    }
+  },
+  "dependencies": {
+    "vosk-browser": "^0.0.8"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
+}
