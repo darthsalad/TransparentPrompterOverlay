@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- The Electron port (including its C# speech helper) is a separate project. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);electron/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,12 +4,14 @@ import path from 'node:path';
 export const DEFAULT_SETTINGS = Object.freeze({
     scriptText:
         'Paste or type your script here.\n\n' +
-        'Manual mode scrolls at the speed you choose.\n' +
-        'Timed mode finishes within the target duration.\n' +
-        'Voice-follow mode listens for your place and recenters the current line.',
+        'Manual: scroll yourself with the mouse wheel.\n' +
+        'Speed: press play and it scrolls at the speed you set.\n' +
+        'Voice: it listens and keeps your current line in the middle.',
     overlayOpacity: 0.28,
     fontSize: 34,
     textColorHex: '#F8FAFC',
+    backgroundColorHex: '#080E18',
+    textOutline: true,
     textAlignment: 'center',
     mirrorText: false,
     windowWidth: 1120,
@@ -17,7 +19,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     windowLeft: null,
     windowTop: null,
     clickThroughEnabled: false,
-    minimalMode: false,
+    minimalMode: true,
     hideFromCapture: true,
     teleprompterMode: 'manual',
     manualScrollSpeed: 54,

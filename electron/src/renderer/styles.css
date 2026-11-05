@@ -407,9 +407,9 @@ textarea::selection {
 
 /* Minimal mode: the stage fills the panel and becomes the editor. */
 
-.minimal-handle,
-.minimal-exit,
-.minimal-restart,
+.minimal-topbar,
+.minimal-clickthrough-hint,
+.minimal-status,
 .minimal-controls {
     display: none;
 }
@@ -417,6 +417,7 @@ textarea::selection {
 .glass.minimal {
     padding: 10px;
     gap: 0;
+    container: glass / inline-size;
 }
 
 .glass.minimal .header,
@@ -452,62 +453,175 @@ textarea::selection {
     opacity: 0.45;
 }
 
-.glass.minimal .minimal-handle,
-.glass.minimal .minimal-exit,
-.glass.minimal .minimal-restart {
+/* Top bar: drag, mode switch, click-through, advanced. It floats over the stage. */
+.glass.minimal .minimal-topbar {
     position: absolute;
     top: 10px;
+    left: 10px;
+    right: 10px;
     z-index: 2;
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.1);
-    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
 }
 
-.glass.minimal .minimal-handle:hover,
-.glass.minimal .minimal-exit:hover,
-.glass.minimal .minimal-restart:hover {
+.minimal-topbar > * {
+    pointer-events: auto;
+}
+
+.minimal-spacer {
+    flex: 1;
+    pointer-events: none;
+}
+
+.minimal-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0.7;
+}
+
+.minimal-pill:hover,
+.minimal-mode:hover {
     opacity: 1;
 }
 
-.minimal-handle {
-    left: 10px;
-    cursor: move;
-    -webkit-app-region: drag;
+.minimal-pill svg {
+    flex: 0 0 auto;
 }
 
-.minimal-handle circle {
-    fill: rgba(255, 255, 255, 0.8);
-}
-
-.minimal-exit {
-    right: 10px;
-}
-
-.glass.minimal .minimal-restart {
-    top: auto;
-    bottom: 18px;
-    left: 10px;
-}
-
-.minimal-exit path,
-.minimal-restart path {
+.minimal-pill path {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.85);
+    stroke: rgba(255, 255, 255, 0.9);
     stroke-width: 1.4;
 }
 
+#minimalClickThroughButton path {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: none;
+}
+
+.minimal-handle {
+    cursor: move;
+    -webkit-app-region: drag;
+    user-select: none;
+}
+
+.minimal-handle circle {
+    fill: rgba(255, 255, 255, 0.85);
+}
+
+.glass.minimal kbd {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+    font: 600 10px/1.4 inherit;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.minimal-mode {
+    display: inline-flex;
+    height: 32px;
+    padding: 2px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    opacity: 0.8;
+}
+
+.minimal-mode button {
+    height: 26px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 13px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.minimal-mode button[aria-checked="true"] {
+    background: rgba(255, 255, 255, 0.28);
+    color: #F8FAFC;
+}
+
+/* Shown only while click-through is on; the window then ignores clicks, so the hotkey is the way back. */
+.glass.minimal.click-through .minimal-clickthrough-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    z-index: 3;
+    display: block;
+    transform: translateX(-50%);
+    padding: 5px 12px;
+    border-radius: 14px;
+    background: rgba(8, 14, 24, 0.7);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.glass.minimal .minimal-status:not([hidden]) {
+    display: block;
+    overflow: hidden;
+    padding: 0 8px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .glass.minimal .minimal-controls {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 0 0 2px;
+}
+
+#minimalRestartButton {
+    justify-self: start;
+}
+
+.minimal-playback {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 14px;
-    padding: 0 40px 2px;
+}
+
+/* Narrow windows: icons only, no shortcut chip. */
+@container glass (max-width: 560px) {
+    .minimal-pill .pill-label,
+    .minimal-pill kbd {
+        display: none;
+    }
+
+    .minimal-pill {
+        padding: 0 9px;
+    }
+}
+
+@container glass (max-width: 400px) {
+    .minimal-controls {
+        grid-template-columns: auto 1fr !important;
+    }
+
+    .minimal-playback {
+        gap: 8px;
+    }
 }
 
 .minimal-slider {
@@ -515,7 +629,7 @@ textarea::selection {
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    width: min(180px, 32%);
+    width: clamp(70px, 18cqi, 180px);
     font-size: 10px;
     color: rgba(255, 255, 255, 0.7);
 }
@@ -531,10 +645,15 @@ textarea::selection {
 .play-button {
     display: grid;
     place-items: center;
-    flex: 0 0 40px;
-    height: 40px;
+    flex: 0 0 48px;
+    height: 48px;
     padding: 0;
     border-radius: 50%;
+}
+
+.play-button svg {
+    width: 20px;
+    height: 20px;
 }
 
 .play-button path {
@@ -556,9 +675,71 @@ textarea::selection {
     bottom: 8px;
 }
 
-.glass.minimal.click-through .minimal-handle,
-.glass.minimal.click-through .minimal-exit,
-.glass.minimal.click-through .minimal-restart,
+.glass.minimal.click-through .minimal-topbar,
 .glass.minimal.click-through .minimal-controls {
     opacity: 0.25;
+}
+
+/* Text outline: a contrasting halo keeps the prompt readable over light and dark backgrounds alike. */
+.glass.text-outline .prompt-text {
+    text-shadow:
+        -0.04em -0.04em 0 var(--prompt-outline),
+        0.04em -0.04em 0 var(--prompt-outline),
+        -0.04em 0.04em 0 var(--prompt-outline),
+        0.04em 0.04em 0 var(--prompt-outline),
+        0 0 0.18em var(--prompt-outline);
+}
+
+.color-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.color-row select {
+    flex: 1;
+    min-width: 0;
+}
+
+.color-row input[type="color"] {
+    flex: 0 0 40px;
+    height: 34px;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Light background color: switch the minimal-mode chrome to dark ink so it stays visible. */
+.glass.minimal.light-bg .minimal-pill,
+.glass.minimal.light-bg .minimal-mode button,
+.glass.minimal.light-bg .minimal-slider,
+.glass.minimal.light-bg .minimal-status {
+    color: rgba(15, 23, 42, 0.9);
+}
+
+.glass.minimal.light-bg .minimal-pill,
+.glass.minimal.light-bg .minimal-mode {
+    border-color: rgba(15, 23, 42, 0.3);
+    background: rgba(15, 23, 42, 0.06);
+}
+
+.glass.minimal.light-bg .minimal-pill path {
+    stroke: rgba(15, 23, 42, 0.85);
+}
+
+.glass.minimal.light-bg #minimalClickThroughButton path,
+.glass.minimal.light-bg .minimal-handle circle {
+    fill: rgba(15, 23, 42, 0.85);
+}
+
+.glass.minimal.light-bg .minimal-mode button[aria-checked="true"] {
+    background: rgba(15, 23, 42, 0.16);
+    color: #0F172A;
+}
+
+.glass.minimal.light-bg kbd {
+    background: rgba(15, 23, 42, 0.1);
+    color: rgba(15, 23, 42, 0.8);
 }

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, net, protocol, screen, session } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, net, protocol, screen, session, shell } from 'electron';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -14,6 +15,11 @@ const APP_ORIGIN = 'app://prompter';
 const SPEECH_MODEL_FILE = 'vosk-model-small-en-us-0.15.tar.gz';
 const SPEECH_MODEL_URL = process.env.PROMPTER_VOSK_MODEL_URL ??
     `https://ccoreilly.github.io/vosk-browser/models/${SPEECH_MODEL_FILE}`;
+
+// Windows voice-follow helper (native/win-speech). Packaged builds ship it in resources/.
+const WIN_SPEECH_HELPER = app.isPackaged
+    ? path.join(process.resourcesPath, 'win-speech', 'WinSpeechHelper.exe')
+    : path.join(SOURCE_ROOT, '..', 'build', 'win-speech', 'WinSpeechHelper.exe');
 
 const FULL_MIN_SIZE = { width: 760, height: 520 };
 const MINIMAL_MIN_SIZE = { width: 320, height: 200 };
@@ -34,9 +40,11 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const settingsStore = new SettingsStore(app.getPath('userData'));
-let settings = settingsStore.load();
+// Every launch starts in minimal mode; Advanced switches to the full controls for this session.
+let settings = { ...settingsStore.load(), minimalMode: true };
 let mainWindow = null;
 let modelDownload = null;
+let speechHelper = null;
 
 function modelsDirectory() {
     return path.join(app.getPath('userData'), 'models');
@@ -196,6 +204,7 @@ function createWindow() {
         minWidth: minimumSize().width,
         minHeight: minimumSize().height,
         title: 'Transparent Prompter Overlay',
+        icon: path.join(SOURCE_ROOT, 'assets', 'icon.png'),
         frame: false,
         transparent: true,
         backgroundColor: '#00000000',
@@ -275,7 +284,8 @@ ipcMain.on('window:set-size', (_event, width, height) => {
     const size = clampSize(width, height);
     const [currentWidth, currentHeight] = mainWindow.getSize();
     if (size.width !== currentWidth || size.height !== currentHeight) {
-        mainWindow.setSize(size.width, size.height);
+        // setSize cannot shrink a non-resizable window on Windows; setBounds can.
+        mainWindow.setBounds({ ...mainWindow.getBounds(), width: size.width, height: size.height });
     }
 });
 
@@ -305,6 +315,76 @@ ipcMain.on('window:toggle-visibility', toggleVisibility);
 
 ipcMain.on('window:close', () => mainWindow?.close());
 
+// Windows uses the WinRT dictation engine through the helper; elsewhere the renderer runs Vosk.
+// Experimental and off by default: on the machines tested, WinRT detected speech but returned no text.
+// Set PROMPTER_WINDOWS_SPEECH=1 (after `npm run build:speech`) to try it; otherwise Vosk is used.
+function nativeSpeechAvailable() {
+    return process.platform === 'win32' && process.env.PROMPTER_WINDOWS_SPEECH === '1' && fs.existsSync(WIN_SPEECH_HELPER);
+}
+
+function startNativeSpeech(sender) {
+    stopNativeSpeech();
+
+    console.log(`[speech] starting ${WIN_SPEECH_HELPER}`);
+    const child = spawn(WIN_SPEECH_HELPER, [], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    speechHelper = child;
+    const send = (message) => {
+        if (speechHelper === child && !sender.isDestroyed()) {
+            sender.send('speech:native-event', message);
+        }
+    };
+
+    let buffered = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+        buffered += chunk;
+        let newline;
+        while ((newline = buffered.indexOf('\n')) >= 0) {
+            const line = buffered.slice(0, newline).trim();
+            buffered = buffered.slice(newline + 1);
+            if (!line) {
+                continue;
+            }
+
+            console.log(`[speech] ${line}`);
+            let message;
+            try {
+                message = JSON.parse(line);
+            } catch {
+                continue;
+            }
+
+            if (message.type === 'error' && message.code === 'privacy') {
+                shell.openExternal('ms-settings:privacy-speech');
+            }
+            send(message);
+        }
+    });
+    child.on('error', (error) => send({ type: 'error', code: 'spawn', message: error.message }));
+    child.on('exit', (code) => {
+        console.log(`[speech] helper exited with code ${code}`);
+        send({ type: 'exit', code });
+        if (speechHelper === child) {
+            speechHelper = null;
+        }
+    });
+}
+
+function stopNativeSpeech() {
+    const child = speechHelper;
+    if (!child) {
+        return;
+    }
+
+    speechHelper = null;
+    child.stdin.end('stop\n');
+    setTimeout(() => child.exitCode === null && child.kill(), 2000);
+}
+
+ipcMain.handle('speech:native-available', () => nativeSpeechAvailable());
+ipcMain.on('speech:native-start', (event) => startNativeSpeech(event.sender));
+ipcMain.on('speech:native-stop', () => stopNativeSpeech());
+
 ipcMain.handle('speech:ensure-model', (event) => ensureSpeechModel(event.sender));
 
 app.whenReady().then(() => {
@@ -322,6 +402,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    stopNativeSpeech();
 });
 
 app.on('window-all-closed', () => {

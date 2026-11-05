@@ -1,6 +1,16 @@
 const SILENCE_CHECK_MS = 350;
 const SILENCE_THRESHOLD_MS = 1200;
 
+// SpeechRecognitionAudioProblem values reported by the Windows helper.
+const AUDIO_PROBLEMS = {
+    NoSignal: 'no signal. Check that the microphone is plugged in and not muted.',
+    TooQuiet: 'too quiet. Speak up or raise the microphone level.',
+    TooLoud: 'too loud. Lower the microphone level.',
+    TooNoisy: 'too much background noise.',
+    TooFast: 'speaking too fast.',
+    TooSlow: 'speaking too slowly.'
+};
+
 // Vosk.createModel never settles when the worker reports an error, so listen for both events.
 function createVoskModel(url) {
     return new Promise((resolve, reject) => {
@@ -13,12 +23,16 @@ function createVoskModel(url) {
     });
 }
 
-// Offline recognition with Vosk (WebAssembly). Chromium's Web Speech API needs Google's
-// cloud service and does not work inside Electron, so it is not an option here.
+// On Windows, recognition runs in the native WinRT helper (main process spawns it).
+// Elsewhere, or if the helper is missing, it runs offline with Vosk (WebAssembly).
+// Chromium's Web Speech API needs Google's cloud service and does not work inside Electron.
 export class SpeechFollowService {
-    constructor(alignmentService, { ensureModel, onModelProgress }) {
+    constructor(alignmentService, { ensureModel, onModelProgress, nativeSpeech = null }) {
         this.alignmentService = alignmentService;
         this.ensureModel = ensureModel;
+        this.nativeSpeech = nativeSpeech;
+        this.nativeAvailable = null;
+        this.usingNative = false;
         this.onFollowUpdate = () => {};
         this.onStatusChanged = () => {};
         this.isListening = false;
@@ -37,6 +51,68 @@ export class SpeechFollowService {
             const percent = totalBytes > 0 ? ` ${Math.round((receivedBytes / totalBytes) * 100)}%` : '';
             this.onStatusChanged(`Downloading the offline speech model (one-time, about 40 MB)...${percent}`);
         });
+
+        nativeSpeech?.onEvent(this.handleNativeEvent);
+    }
+
+    async isNativeAvailable() {
+        if (!this.nativeSpeech) {
+            return false;
+        }
+
+        this.nativeAvailable ??= await this.nativeSpeech.available().catch(() => false);
+        return this.nativeAvailable;
+    }
+
+    handleNativeEvent = (message) => {
+        if (!this.isListening || !this.usingNative) {
+            return;
+        }
+
+        switch (message.type) {
+            case 'ready':
+                this.onStatusChanged(`Listening on "${message.microphone}" (${message.language}). If that is the wrong mic, change the default input in Windows Sound settings.`);
+                break;
+            case 'state':
+                if (message.state === 'SoundStarted' && !this.reportedSpeaking) {
+                    this.onStatusChanged('Hearing sound...');
+                }
+                break;
+            case 'audio':
+                this.onStatusChanged(`Microphone problem: ${AUDIO_PROBLEMS[message.problem] ?? message.problem}`);
+                break;
+            case 'partial':
+                if (message.text !== this.lastPartial) {
+                    this.lastPartial = message.text;
+                    this.publishTranscript(message.text);
+                }
+                break;
+            case 'result':
+                this.lastPartial = '';
+                this.publishTranscript(message.text);
+                break;
+            case 'error':
+                this.lastNativeError = message.message;
+                this.onStatusChanged(`Voice-follow: ${message.message}`);
+                break;
+            case 'exit':
+                // The helper exits on its own only after a fatal error; keep that error on screen.
+                this.resetListening();
+                this.onStatusChanged(this.lastNativeError
+                    ? `Voice-follow stopped: ${this.lastNativeError}`
+                    : 'Windows speech recognition stopped unexpectedly.');
+                break;
+        }
+    };
+
+    resetListening() {
+        this.startToken++;
+        this.isListening = false;
+        this.usingNative = false;
+        this.reportedSpeaking = false;
+        this.lastPartial = '';
+        clearInterval(this.silenceTimer);
+        this.silenceTimer = null;
     }
 
     updateScript(script) {
@@ -51,6 +127,20 @@ export class SpeechFollowService {
 
         const token = ++this.startToken;
         this.isListening = true;
+
+        if (await this.isNativeAvailable()) {
+            if (token !== this.startToken) {
+                return;
+            }
+
+            this.usingNative = true;
+            this.lastNativeError = null;
+            this.lastSpeech = performance.now();
+            this.silenceTimer = setInterval(this.checkSilence, SILENCE_CHECK_MS);
+            this.onStatusChanged('Starting Windows speech recognition...');
+            this.nativeSpeech.start();
+            return;
+        }
 
         try {
             const model = await this.loadModel();
@@ -110,12 +200,11 @@ export class SpeechFollowService {
             return;
         }
 
-        this.startToken++;
-        this.isListening = false;
-        this.reportedSpeaking = false;
-        this.lastPartial = '';
-        clearInterval(this.silenceTimer);
-        this.silenceTimer = null;
+        if (this.usingNative) {
+            this.nativeSpeech.stop();
+        }
+
+        this.resetListening();
 
         if (this.audio) {
             const { stream, context, source, processor } = this.audio;

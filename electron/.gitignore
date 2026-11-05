@@ -1,2 +1,5 @@
 node_modules/
 dist/
+build/
+native/win-speech/bin/
+native/win-speech/obj/

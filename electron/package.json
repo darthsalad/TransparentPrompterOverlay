@@ -10,6 +10,7 @@
     "start": "electron . --ozone-platform=x11",
     "start:wayland": "electron . --ozone-platform=wayland --enable-features=GlobalShortcutsPortal",
     "test": "node --test",
+    "build:speech": "node scripts/build-speech.mjs",
     "dist:win": "electron-builder --win nsis portable",
     "dist:linux": "electron-builder --linux AppImage"
   },
@@ -24,13 +25,24 @@
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": "resources/icon.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "resources/icon.png"
+    },
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Transparent Prompter Overlay"
     }
   },
   "dependencies": {

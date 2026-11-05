@@ -15,7 +15,13 @@ On Windows, `npm start` works too. Windows ignores the `--ozone-platform` flag.
 
 ## Minimal mode
 
-To enter minimal mode, click **Minimal mode** in the header. The script stage then fills the whole panel, and you can type or paste into it directly. A play/pause button sits at the bottom center, with a speed slider on its left and an opacity slider on its right. The speed slider only works in Manual mode. Drag the round handle at the top left to move the window. Click the button at the top right to leave minimal mode. The button at the bottom left pauses playback and scrolls back to the top; the script text is kept. In minimal mode the window can shrink to 320×200.
+To enter minimal mode, click **Minimal mode** in the header. The script stage then fills the whole panel, and you can type or paste into it directly. The top bar holds, from left to right:
+- **Drag**: drag it to move the window.
+- **Manual / Speed / Voice**: Manual does not scroll on its own, so you scroll with the mouse wheel; pressing play switches to Speed. Speed scrolls at the slider's speed. Voice follows your speech. In Voice mode, a status line under the controls shows what the recognizer hears and any errors.
+- **Click-through**: lets clicks pass to the apps behind. While it is on, the window ignores clicks, so a hint shows the shortcut to turn it off: `Ctrl+Shift+F8`.
+- **Advanced**: leaves minimal mode.
+
+A play/pause button sits at the bottom center, with a speed slider on its left and an opacity slider on its right. The speed slider only works in Speed mode. **Start over** at the bottom left pauses playback and scrolls back to the top; the script text is kept. Below a width of 560px, the buttons show icons only. In minimal mode the window can shrink to 320×200.
 
 ## Hide from screen sharing
 
@@ -25,6 +31,7 @@ The Window card has a **Hide from screen sharing and recordings** setting, on by
 
 ```bash
 npm run dist:win     # dist/Transparent Prompter Overlay 1.0.0.exe (portable) + NSIS installer
+npm run build:speech # experimental Windows speech helper -> build/win-speech (needs the .NET 10 SDK; not shipped)
 npm run dist:linux   # AppImage
 ```
 
@@ -34,8 +41,8 @@ You can build the Windows targets from Linux without wine. The builds are unsign
 
 | Area | WPF | Electron |
 | --- | --- | --- |
-| Voice-follow engine | `System.Speech` dictation (Windows only) | [Vosk](https://alphacephei.com/vosk/) offline WebAssembly (`vosk-browser`) |
-| Speech model | Windows speech language pack | `vosk-model-small-en-us-0.15` (about 40 MB), downloaded once on first voice-follow start |
+| Voice-follow engine | `System.Speech` dictation (Windows only) | [Vosk](https://alphacephei.com/vosk/) offline WebAssembly (`vosk-browser`). Experimental, off by default: WinRT `Windows.Media.SpeechRecognition` through the `native/win-speech` helper, enabled with `PROMPTER_WINDOWS_SPEECH=1` |
+| Speech model | Windows speech language pack | Windows: the system dictation engine; needs **Settings > Privacy & security > Speech > Online speech recognition** turned on. Vosk: `vosk-model-small-en-us-0.15` (about 40 MB), downloaded once on first voice-follow start |
 | Click-through | `WS_EX_TRANSPARENT` | `BrowserWindow.setIgnoreMouseEvents` |
 | Hotkeys | `RegisterHotKey` | `globalShortcut` (same `Ctrl+Shift+F8`–`F12`) |
 | Settings | `%LocalAppData%\TransparentPrompterOverlay\settings.json` | `<userData>/settings.json` (Windows: `%APPDATA%\Transparent Prompter Overlay`, Linux: `~/.config/Transparent Prompter Overlay`) |

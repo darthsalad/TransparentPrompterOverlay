@@ -1,102 +1,106 @@
+<p align="center"><img src="electron/src/assets/icon.png" width="96" alt=""></p>
+
 # Transparent Prompter Overlay
 
-A lightweight Windows teleprompter overlay built with WPF.
+A see-through teleprompter that floats on top of every other window. Put it near your webcam and read your script while you look at the camera. You can make it hide from screen shares, so people on the call can't see it.
 
-A cross-platform Electron port (Windows and Linux) with the same features lives in [`electron/`](electron/README.md).
+It runs on Windows and Linux.
 
-## Why WPF
+## Install
 
-WPF is the best fit here because it gives reliable Windows-native support for:
+1. Open the [Releases page](https://github.com/darthsalad/TransparentPrompterOverlay/releases) and download one of these:
+   - `Transparent Prompter Overlay Setup 1.0.0.exe` installs the app with a Start menu shortcut.
+   - `Transparent Prompter Overlay 1.0.0.exe` is portable: it runs without installing.
+2. Run it. The app is not code-signed, so Windows SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**.
 
-- borderless always-on-top windows
-- transparent layered visuals
-- Win32 click-through behavior
-- global hotkeys
-- responsive text rendering for large scripts
+To run from source instead, see [Run from source](#run-from-source).
 
-That lets the app feel like a true prompter overlay instead of a repurposed notes app.
+## Using it
 
-## Features
+The app opens in **minimal mode**: just your script, with a few controls around it.
 
-- Borderless, always-on-top floating overlay
-- Semi-transparent glass-style background with readable prompt text
-- Drag-to-move header and resize grip
-- Adjustable opacity, font size, text color, and text alignment
-- Optional mirrored prompt text for reflective teleprompter glass
-- Editable script panel with live prompt preview
-- Manual scrolling mode with start/pause and speed controls
-- Timed scrolling mode with editable target duration
-- Voice-follow mode using Windows speech recognition
-- Rephrase assistant with 2-3 simpler alternatives for selected text
-- Click-through mode so mouse input can pass to apps behind the overlay
-- Global hotkeys:
-  - `Ctrl+Shift+F8` toggle click-through
-  - `Ctrl+Shift+F9` show or hide the overlay
-  - `Ctrl+Shift+F10` start or pause scrolling / voice-follow
-  - `Ctrl+Shift+F11` speed up manual mode or shorten timed mode
-  - `Ctrl+Shift+F12` slow down manual mode or lengthen timed mode
-- Local persistence for the script and settings at `%LocalAppData%\TransparentPrompterOverlay\settings.json`
+1. Click the text and paste or type your script.
+2. Choose a mode at the top: **Manual**, **Speed** or **Voice**.
+3. Press the round **play** button at the bottom.
 
-## Run It
+### Minimal mode controls
 
-From the project folder:
+| Control | What it does |
+| --- | --- |
+| **Drag** (top left) | Drag to move the window. |
+| **Manual** | Nothing scrolls on its own. Scroll with the mouse wheel. Pressing play switches to Speed. |
+| **Speed** | Scrolls at the speed set by the left slider. |
+| **Voice** | Listens to you read and keeps your current line in the middle. See [Voice-follow](#voice-follow). |
+| **Click-through** | Clicks pass through the overlay to the app behind it. To turn it off, press `Ctrl+Shift+F8`. |
+| **Advanced** (top right) | Opens the full controls. |
+| **Start over** (bottom left) | Pauses and scrolls back to the top. Your script is kept. |
+| Left slider | Scroll speed (Manual and Speed modes). |
+| Right slider | Background opacity. Raise it, or pick a background color in Advanced, if the text is hard to read. |
+| Grip (bottom right corner) | Drag to resize the window. |
 
-```powershell
-dotnet restore
-dotnet build
-dotnet run --project TransparentPrompterOverlay.csproj
-```
+### Advanced view
 
-## How It Works
+**Advanced** shows everything:
+- a script editor and a **Rephrase** helper that suggests simpler wording for selected text;
+- **Timed** mode, which finishes the script in a duration you set, such as `03:00`;
+- font size, alignment and mirrored text (for teleprompter glass);
+- text color and background color, each with presets or any custom color;
+- a text outline (on by default) that keeps text readable over light and dark windows alike;
+- **Hide from screen sharing and recordings**.
 
-### Transparency
+The app opens in minimal mode every time you start it.
 
-- The window uses `AllowsTransparency="True"` and `WindowStyle="None"` so the real app window chrome disappears.
-- The visible glass panel is drawn inside that transparent window with a configurable alpha value.
-- Prompt text stays opaque while the panel stays see-through.
+### Keyboard shortcuts
 
-### Click-through
+These work even when another app has focus.
 
-- The app toggles the Win32 extended style `WS_EX_TRANSPARENT`.
-- When click-through is on, mouse input passes to the app behind the overlay.
-- When click-through is off, the window becomes editable, draggable, and resizable again.
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+Shift+F8` | Turn click-through on or off |
+| `Ctrl+Shift+F9` | Show or hide the overlay |
+| `Ctrl+Shift+F10` | Play or pause |
+| `Ctrl+Shift+F11` | Faster (in Timed mode: shorter duration) |
+| `Ctrl+Shift+F12` | Slower (in Timed mode: longer duration) |
 
-### Timed scrolling
+### Hide from screen sharing
 
-- The timed scroll service captures the current scroll position and the total remaining distance.
-- It then advances the prompt toward the bottom over the requested duration using a lightweight UI timer.
-- Adjusting the timed duration while running re-paces the remaining script.
+**Hide from screen sharing and recordings** is on by default. On Windows 10 (version 2004 or later), Windows 11 and macOS, you still see the overlay, but Teams, Zoom, OBS, screenshots and recordings don't capture it. Older Windows versions capture it as a black box. It has no effect on Linux.
 
 ### Voice-follow
 
-- Voice-follow uses `System.Speech` with dictation recognition on Windows.
-- Recognized phrases are matched back to the script using a practical alignment service that searches for recent word sequences and approximates spoken progress.
-- When a match is found, the app recenters the matching part of the script in the prompt stage.
-- If speech stops, the prompt stops moving until speech resumes.
+Voice mode listens through your microphone and matches what you say to the script. The first time you start it, the app downloads a 40 MB offline speech model. After that, it works without internet.
 
-### Voice-follow limitations
+Limitations:
+- Accuracy is modest. It works best when you speak clearly and stay close to the written words.
+- It uses the microphone Windows has set as default. To change it, go to **Settings > System > Sound > Input**.
+- If it loses your place, scroll with the mouse wheel. It continues from there.
 
-- It works best when the spoken wording stays fairly close to the written script.
-- Recognition quality depends on microphone quality, room noise, and installed Windows speech language support.
-- It is intentionally practical rather than perfect: it aims to keep the current line centered smoothly, not to perform exact word-by-word tracking.
+### Settings
 
-### AI rephrase architecture
+The app saves your script, window position and preferences automatically:
+- Windows: `%APPDATA%\Transparent Prompter Overlay\settings.json`
+- Linux: `~/.config/Transparent Prompter Overlay/settings.json`
 
-- The rephrase feature is behind `ILineRephraseService`.
-- The current implementation is a local heuristic provider that produces simpler wording, shorter delivery, and more conversational alternatives.
-- A future API provider can replace or extend that service without changing the overlay UI.
+## Run from source
 
-## Project Layout
+You need [Node.js](https://nodejs.org/) 20 or later.
 
-- `MainWindow.xaml` and `MainWindow.xaml.cs`: overlay shell, UI wiring, hotkeys, click-through, and viewport behavior
-- `Models/OverlaySettings.cs`: persisted script and overlay settings
-- `Models/TeleprompterMode.cs`: scroll mode selection
-- `Models/TextColorOption.cs` and `Models/TextAlignmentOption.cs`: visual control presets
-- `Models/RephraseSuggestion.cs`, `Models/ScriptSelection.cs`, `Models/SpeechAlignmentResult.cs`, `Models/SpeechFollowUpdate.cs`: feature-specific data models
-- `Native/NativeMethods.cs`: Win32 interop for hotkeys and window styles
-- `Services/TeleprompterScrollService.cs`: manual and timed scrolling engine
-- `Services/SpeechFollowService.cs`: speech recognition lifecycle and follow updates
-- `Services/ScriptAlignmentService.cs`: practical script matching for spoken fragments
-- `Services/ILineRephraseService.cs` and `Services/LocalHeuristicRephraseService.cs`: pluggable rephrase feature
-- `Services/SettingsStore.cs`: local JSON persistence
-- `Services/GlobalHotkeyManager.cs`: global hotkey registration
+```bash
+git clone https://github.com/darthsalad/TransparentPrompterOverlay.git
+cd TransparentPrompterOverlay/electron
+npm install
+npm start
+```
+
+To build the Windows installer and portable exe into `electron/dist/`:
+
+```bash
+npm run dist:win
+```
+
+Linux notes, the project layout and developer details are in [electron/README.md](electron/README.md).
+
+## Repository layout
+
+- `electron/`: the app (Electron). All current work happens here.
+- Repository root (`*.xaml`, `*.cs`): the original Windows-only WPF version. It is kept as a reference and is no longer developed. To run it: `dotnet run --project TransparentPrompterOverlay.csproj`.

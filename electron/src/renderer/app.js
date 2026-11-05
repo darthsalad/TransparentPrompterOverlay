@@ -16,6 +16,11 @@ const elements = {
     minimalButton: $('minimalButton'),
     exitMinimalButton: $('exitMinimalButton'),
     minimalRestartButton: $('minimalRestartButton'),
+    minimalClickThroughButton: $('minimalClickThroughButton'),
+    minimalStatus: $('minimalStatus'),
+    minimalModeManualButton: $('minimalModeManualButton'),
+    minimalModeSpeedButton: $('minimalModeSpeedButton'),
+    minimalModeVoiceButton: $('minimalModeVoiceButton'),
     minimalSpeedSlider: $('minimalSpeedSlider'),
     minimalSpeedValue: $('minimalSpeedValue'),
     minimalPlayButton: $('minimalPlayButton'),
@@ -41,6 +46,10 @@ const elements = {
     fontSizeSlider: $('fontSizeSlider'),
     fontSizeValue: $('fontSizeValue'),
     textColorSelect: $('textColorSelect'),
+    textColorPicker: $('textColorPicker'),
+    backgroundColorSelect: $('backgroundColorSelect'),
+    backgroundColorPicker: $('backgroundColorPicker'),
+    textOutlineCheckbox: $('textOutlineCheckbox'),
     alignmentSelect: $('alignmentSelect'),
     mirrorCheckbox: $('mirrorCheckbox'),
     widthSlider: $('widthSlider'),
@@ -62,7 +71,13 @@ const elements = {
 const scrollService = new TeleprompterScrollService();
 const speechFollowService = new SpeechFollowService(new ScriptAlignmentService(), {
     ensureModel: prompter.ensureSpeechModel,
-    onModelProgress: prompter.onSpeechModelProgress
+    onModelProgress: prompter.onSpeechModelProgress,
+    nativeSpeech: {
+        available: prompter.nativeSpeechAvailable,
+        start: prompter.startNativeSpeech,
+        stop: prompter.stopNativeSpeech,
+        onEvent: prompter.onNativeSpeechEvent
+    }
 });
 const rephraseService = new LocalHeuristicRephraseService();
 
@@ -101,16 +116,22 @@ const viewport = {
 
 // ---- Derived labels (mirrors the WPF bindings) ----
 
-const modeLabel = (mode) => ({ manual: 'Manual', timed: 'Timed' })[mode] ?? 'Voice-follow';
+// 'hand' = no auto-scroll (labelled Manual); 'manual' = scroll at a set speed (labelled Speed).
+const modeLabel = (mode) => ({ hand: 'Manual', manual: 'Speed', timed: 'Timed' })[mode] ?? 'Voice-follow';
+const usesSpeedSlider = (mode) => mode === 'manual' || mode === 'hand';
 
 const isPlaybackActive = () => scrollService.isRunning || speechFollowService.isListening;
 
 function playbackStatusText() {
     const { teleprompterMode: mode, manualScrollSpeed, timedDurationSeconds } = state.settings;
+    if (mode === 'hand') {
+        return 'Manual mode does not scroll on its own. Scroll with the mouse wheel, or press Start to scroll at the set speed.';
+    }
+
     if (mode === 'manual') {
         return scrollService.isRunning
-            ? `Manual mode is scrolling at ${manualScrollSpeed.toFixed(0)} px/s.`
-            : 'Manual mode waits for Start and moves at the speed you choose.';
+            ? `Speed mode is scrolling at ${manualScrollSpeed.toFixed(0)} px/s.`
+            : 'Speed mode waits for Start and moves at the speed you choose.';
     }
 
     if (mode === 'timed') {
@@ -130,8 +151,10 @@ function statusLineText() {
     }
 
     switch (state.settings.teleprompterMode) {
+        case 'hand':
+            return 'Manual mode leaves scrolling to you. Start switches to Speed mode.';
         case 'manual':
-            return 'Manual mode keeps the stage glanceable while you control the pace directly.';
+            return 'Speed mode keeps the stage glanceable while you control the pace directly.';
         case 'timed':
             return 'Timed mode spreads the remaining script across your target duration and is best for a known run length.';
         default:
@@ -147,6 +170,37 @@ function playbackButtonLabel() {
     return scrollService.isRunning ? 'Pause scrolling' : 'Start scrolling';
 }
 
+// ---- Colors ----
+
+function hexToRgb(hex) {
+    const value = parseInt(hex.slice(1), 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function isLightColor(hex) {
+    const [r, g, b] = hexToRgb(hex);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+
+// A preset <select> plus a free color picker. Colors that match no preset show as "Custom...".
+function setColorChoice(select, picker, hex) {
+    const preset = [...select.options].find((option) => option.value.toLowerCase() === hex.toLowerCase());
+    setValue(select, preset ? preset.value : 'custom');
+    setValue(picker, hex.toLowerCase());
+}
+
+function wireColorChoice(select, picker, key) {
+    select.addEventListener('change', () => {
+        if (select.value === 'custom') {
+            picker.click();
+            return;
+        }
+
+        setSetting(key, select.value);
+    });
+    picker.addEventListener('input', () => setSetting(key, picker.value.toUpperCase()));
+}
+
 // ---- Rendering ----
 
 function setValue(element, value) {
@@ -159,8 +213,13 @@ function setValue(element, value) {
 function render() {
     const settings = state.settings;
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--overlay-bg', `rgba(8, 14, 24, ${Math.round(settings.overlayOpacity * 255) / 255})`);
+    const [r, g, b] = hexToRgb(settings.backgroundColorHex);
+    rootStyle.setProperty('--overlay-bg', `rgba(${r}, ${g}, ${b}, ${Math.round(settings.overlayOpacity * 255) / 255})`);
     rootStyle.setProperty('--prompt-color', settings.textColorHex);
+    // The outline takes the opposite brightness of the text, so it separates the text from whatever is behind.
+    rootStyle.setProperty('--prompt-outline', isLightColor(settings.textColorHex) ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.9)');
+    elements.glass.classList.toggle('text-outline', settings.textOutline);
+    elements.glass.classList.toggle('light-bg', isLightColor(settings.backgroundColorHex) && settings.overlayOpacity >= 0.4);
     rootStyle.setProperty('--prompt-size', `${settings.fontSize}px`);
     rootStyle.setProperty('--prompt-align', settings.textAlignment);
 
@@ -179,10 +238,16 @@ function render() {
     elements.minimalPlayButton.classList.toggle('playing', isPlaybackActive());
     elements.minimalPlayButton.title = playbackButtonLabel();
     setValue(elements.minimalSpeedSlider, settings.manualScrollSpeed);
-    elements.minimalSpeedSlider.disabled = settings.teleprompterMode !== 'manual';
-    elements.minimalSpeedValue.textContent = settings.teleprompterMode === 'manual'
+    elements.minimalSpeedSlider.disabled = !usesSpeedSlider(settings.teleprompterMode);
+    elements.minimalSpeedValue.textContent = usesSpeedSlider(settings.teleprompterMode)
         ? `speed ${settings.manualScrollSpeed.toFixed(0)} px/s`
         : `${modeLabel(settings.teleprompterMode).toLowerCase()} mode`;
+    // Minimal mode hides the status line, so voice-follow feedback (hearing, errors) shows here.
+    elements.minimalStatus.hidden = settings.teleprompterMode !== 'voiceFollow' || !state.voiceStatusText;
+    elements.minimalStatus.textContent = state.voiceStatusText ?? '';
+    elements.minimalModeManualButton.setAttribute('aria-checked', String(settings.teleprompterMode === 'hand'));
+    elements.minimalModeSpeedButton.setAttribute('aria-checked', String(settings.teleprompterMode === 'manual'));
+    elements.minimalModeVoiceButton.setAttribute('aria-checked', String(settings.teleprompterMode === 'voiceFollow'));
     setValue(elements.minimalOpacitySlider, settings.overlayOpacity);
     elements.minimalOpacityValue.textContent = `opacity ${Math.round(settings.overlayOpacity * 100)}%`;
     elements.hideFromCaptureCheckbox.checked = settings.hideFromCapture;
@@ -213,7 +278,9 @@ function render() {
     elements.opacityValue.textContent = `${Math.round(settings.overlayOpacity * 100)}%`;
     setValue(elements.fontSizeSlider, settings.fontSize);
     elements.fontSizeValue.textContent = settings.fontSize.toFixed(0);
-    setValue(elements.textColorSelect, settings.textColorHex);
+    setColorChoice(elements.textColorSelect, elements.textColorPicker, settings.textColorHex);
+    setColorChoice(elements.backgroundColorSelect, elements.backgroundColorPicker, settings.backgroundColorHex);
+    elements.textOutlineCheckbox.checked = settings.textOutline;
     setValue(elements.alignmentSelect, settings.textAlignment);
     elements.mirrorCheckbox.checked = settings.mirrorText;
 
@@ -239,7 +306,7 @@ function renderRephraseSuggestions() {
 // ---- Settings ----
 
 function normalizeSettings(settings) {
-    settings.overlayOpacity = clamp(Number(settings.overlayOpacity) || 0.28, 0.12, 0.78);
+    settings.overlayOpacity = clamp(Number(settings.overlayOpacity) || 0.28, 0.12, 0.95);
     settings.fontSize = clamp(Number(settings.fontSize) || 34, 20, 76);
     const [minWidth, minHeight] = settings.minimalMode ? [320, 200] : [760, 520];
     settings.windowWidth = clamp(Number(settings.windowWidth) || 1120, minWidth, 1600);
@@ -255,16 +322,22 @@ function normalizeSettings(settings) {
         settings.textColorHex = '#F8FAFC';
     }
 
+    if (!isValidHexColor(settings.backgroundColorHex)) {
+        settings.backgroundColorHex = '#080E18';
+    }
+
+    settings.textOutline = settings.textOutline !== false;
+
     if (!['center', 'left', 'right'].includes(settings.textAlignment)) {
         settings.textAlignment = 'center';
     }
 
-    if (!['manual', 'timed', 'voiceFollow'].includes(settings.teleprompterMode)) {
+    if (!['hand', 'manual', 'timed', 'voiceFollow'].includes(settings.teleprompterMode)) {
         settings.teleprompterMode = 'manual';
     }
 
     settings.mirrorText = Boolean(settings.mirrorText);
-    settings.minimalMode = Boolean(settings.minimalMode);
+    settings.minimalMode = true; // Every launch starts in minimal mode.
     settings.hideFromCapture = settings.hideFromCapture !== false;
     settings.clickThroughEnabled = false;
     return settings;
@@ -330,6 +403,11 @@ function toggleClickThrough() {
 }
 
 async function togglePlayback() {
+    // Manual mode has no playback of its own: Play switches to Speed mode and scrolls at the set speed.
+    if (state.settings.teleprompterMode === 'hand') {
+        setSetting('teleprompterMode', 'manual');
+    }
+
     const mode = state.settings.teleprompterMode;
     if (mode === 'manual' || mode === 'timed') {
         await speechFollowService.stop();
@@ -353,6 +431,7 @@ async function togglePlayback() {
 function adjustPlaybackRate(faster) {
     const settings = state.settings;
     switch (settings.teleprompterMode) {
+        case 'hand':
         case 'manual':
             setSetting('manualScrollSpeed', clamp(settings.manualScrollSpeed + (faster ? 10 : -10), 10, 220));
             break;
@@ -389,6 +468,8 @@ function resetView() {
         overlayOpacity: 0.28,
         fontSize: 34,
         textColorHex: '#F8FAFC',
+        backgroundColorHex: '#080E18',
+        textOutline: true,
         textAlignment: 'center',
         mirrorText: false,
         windowWidth: 1120,
@@ -622,6 +703,10 @@ function wireEvents() {
     elements.exitMinimalButton.addEventListener('click', () => setSetting('minimalMode', false));
     elements.minimalPlayButton.addEventListener('click', togglePlayback);
     elements.minimalRestartButton.addEventListener('click', startOverFromTop);
+    elements.minimalClickThroughButton.addEventListener('click', toggleClickThrough);
+    elements.minimalModeManualButton.addEventListener('click', () => setSetting('teleprompterMode', 'hand'));
+    elements.minimalModeSpeedButton.addEventListener('click', () => setSetting('teleprompterMode', 'manual'));
+    elements.minimalModeVoiceButton.addEventListener('click', () => setSetting('teleprompterMode', 'voiceFollow'));
     elements.minimalSpeedSlider.addEventListener('input', () => setSetting('manualScrollSpeed', Number(elements.minimalSpeedSlider.value)));
     elements.minimalOpacitySlider.addEventListener('input', () => setSetting('overlayOpacity', Number(elements.minimalOpacitySlider.value)));
     elements.hideFromCaptureCheckbox.addEventListener('change', () => setSetting('hideFromCapture', elements.hideFromCaptureCheckbox.checked));
@@ -656,7 +741,9 @@ function wireEvents() {
 
     elements.opacitySlider.addEventListener('input', () => setSetting('overlayOpacity', Number(elements.opacitySlider.value)));
     elements.fontSizeSlider.addEventListener('input', () => setSetting('fontSize', Number(elements.fontSizeSlider.value)));
-    elements.textColorSelect.addEventListener('change', () => setSetting('textColorHex', elements.textColorSelect.value));
+    wireColorChoice(elements.textColorSelect, elements.textColorPicker, 'textColorHex');
+    wireColorChoice(elements.backgroundColorSelect, elements.backgroundColorPicker, 'backgroundColorHex');
+    elements.textOutlineCheckbox.addEventListener('change', () => setSetting('textOutline', elements.textOutlineCheckbox.checked));
     elements.alignmentSelect.addEventListener('change', () => setSetting('textAlignment', elements.alignmentSelect.value));
     elements.mirrorCheckbox.addEventListener('change', () => setSetting('mirrorText', elements.mirrorCheckbox.checked));
     elements.widthSlider.addEventListener('input', () => setSetting('windowWidth', Number(elements.widthSlider.value)));

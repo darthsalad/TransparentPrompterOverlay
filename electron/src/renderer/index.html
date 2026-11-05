@@ -11,22 +11,35 @@
 </head>
 <body>
 <div class="glass" id="glass">
-    <div class="minimal-handle" title="Drag to move">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <circle cx="3" cy="3" r="1.2"/><circle cx="9" cy="3" r="1.2"/>
-            <circle cx="3" cy="9" r="1.2"/><circle cx="9" cy="9" r="1.2"/>
-        </svg>
+    <div class="minimal-topbar">
+        <div class="minimal-pill minimal-handle" title="Drag to move the overlay">
+            <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">
+                <circle cx="3" cy="3" r="1.2"/><circle cx="9" cy="3" r="1.2"/>
+                <circle cx="3" cy="9" r="1.2"/><circle cx="9" cy="9" r="1.2"/>
+            </svg>
+            <span class="pill-label">Drag</span>
+        </div>
+        <div class="minimal-mode" role="radiogroup" aria-label="Scroll mode">
+            <button type="button" role="radio" id="minimalModeManualButton" title="No auto-scroll: scroll yourself. Play switches to Speed.">Manual</button>
+            <button type="button" role="radio" id="minimalModeSpeedButton" title="Scroll at the speed set by the slider">Speed</button>
+            <button type="button" role="radio" id="minimalModeVoiceButton" title="Follow your voice as you read">Voice</button>
+        </div>
+        <div class="minimal-spacer"></div>
+        <button type="button" class="minimal-pill" id="minimalClickThroughButton" title="Let clicks pass through to apps behind the overlay (Ctrl+Shift+F8 toggles it)">
+            <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2,1 L2,9.5 L4.4,7.4 L6,11 L7.6,10.3 L6,6.8 L9.2,6.8 Z"/>
+            </svg>
+            <span class="pill-label">Click-through</span>
+            <kbd>Ctrl+Shift+F8</kbd>
+        </button>
+        <button type="button" class="minimal-pill" id="exitMinimalButton" title="Back to the full controls">
+            <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M1,4 V1 H4 M8,1 H11 V4 M11,8 V11 H8 M4,11 H1 V8"/>
+            </svg>
+            <span class="pill-label">Advanced</span>
+        </button>
     </div>
-    <button type="button" class="minimal-restart" id="minimalRestartButton" title="Start over from the top">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M2.5,6 A3.5,3.5 0 1 0 3.6,3.4 M1.8,1.2 V3.8 H4.4"/>
-        </svg>
-    </button>
-    <button type="button" class="minimal-exit" id="exitMinimalButton" title="Exit minimal mode">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M1,4 V1 H4 M8,1 H11 V4 M11,8 V11 H8 M4,11 H1 V8"/>
-        </svg>
-    </button>
+    <div class="minimal-clickthrough-hint">Click-through on · <kbd>Ctrl+Shift+F8</kbd> to unlock</div>
     <header class="header">
         <div class="drag-card">
             <div class="drag-title">Teleprompter Overlay</div>
@@ -57,7 +70,8 @@
 
                 <label class="label" for="modeSelect">Scroll mode</label>
                 <select id="modeSelect">
-                    <option value="manual">Manual</option>
+                    <option value="hand">Manual (scroll yourself)</option>
+                    <option value="manual">Speed</option>
                     <option value="timed">Timed</option>
                     <option value="voiceFollow">Voice-follow</option>
                 </select>
@@ -73,7 +87,7 @@
 
             <section class="card">
                 <h2>Speed and Timing</h2>
-                <p class="card-hint">Manual mode uses pixels per second. Timed mode finishes within your target time.</p>
+                <p class="card-hint">Speed mode uses pixels per second. Timed mode finishes within your target time.</p>
 
                 <label class="label" for="manualSpeedSlider">Manual speed</label>
                 <div class="slider-row">
@@ -97,8 +111,19 @@
 
                 <label class="label" for="opacitySlider">Overlay opacity</label>
                 <div class="slider-row">
-                    <input type="range" id="opacitySlider" min="0.12" max="0.78" step="0.01">
+                    <input type="range" id="opacitySlider" min="0.12" max="0.95" step="0.01">
                     <span id="opacityValue"></span>
+                </div>
+
+                <label class="label spaced" for="backgroundColorSelect">Background color</label>
+                <div class="color-row">
+                    <select id="backgroundColorSelect">
+                        <option value="#080E18">Dark glass</option>
+                        <option value="#F8FAFC">Light glass</option>
+                        <option value="#3F3F46">Graphite</option>
+                        <option value="custom">Custom...</option>
+                    </select>
+                    <input type="color" id="backgroundColorPicker" title="Pick any background color">
                 </div>
 
                 <label class="label spaced" for="fontSizeSlider">Font size</label>
@@ -108,6 +133,7 @@
                 </div>
 
                 <label class="label spaced" for="textColorSelect">Text color</label>
+                <div class="color-row">
                 <select id="textColorSelect">
                     <option value="#F8FAFC">Studio White</option>
                     <option value="#FDE68A">Soft Amber</option>
@@ -115,7 +141,12 @@
                     <option value="#BFDBFE">Sky Cue</option>
                     <option value="#FBCFE8">Rose Cue</option>
                     <option value="#CBD5E1">Slate Ink</option>
+                    <option value="#0F172A">Ink Black</option>
+                    <option value="#1E3A8A">Deep Navy</option>
+                    <option value="custom">Custom...</option>
                 </select>
+                    <input type="color" id="textColorPicker" title="Pick any text color">
+                </div>
 
                 <label class="label spaced" for="alignmentSelect">Alignment</label>
                 <select id="alignmentSelect">
@@ -127,6 +158,11 @@
                 <label class="checkbox">
                     <input type="checkbox" id="mirrorCheckbox">
                     Mirror prompt text for reflective teleprompter glass
+                </label>
+
+                <label class="checkbox">
+                    <input type="checkbox" id="textOutlineCheckbox">
+                    Outline the text so it stays readable on any background
                 </label>
             </section>
 
@@ -169,6 +205,13 @@
             </div>
 
             <div class="minimal-controls">
+                <button type="button" class="minimal-pill" id="minimalRestartButton" title="Pause and scroll back to the top">
+                    <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true">
+                        <path d="M2.5,6 A3.5,3.5 0 1 0 3.6,3.4 M1.8,1.2 V3.8 H4.4"/>
+                    </svg>
+                    <span class="pill-label">Start over</span>
+                </button>
+                <div class="minimal-playback">
                 <label class="minimal-slider" title="Manual scroll speed">
                     <input type="range" id="minimalSpeedSlider" min="10" max="220" step="1">
                     <span id="minimalSpeedValue"></span>
@@ -178,10 +221,13 @@
                     <svg class="icon-pause" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3,2 H6.5 V14 H3 Z M9.5,2 H13 V14 H9.5 Z"/></svg>
                 </button>
                 <label class="minimal-slider" title="Background opacity">
-                    <input type="range" id="minimalOpacitySlider" min="0.12" max="0.78" step="0.01">
+                    <input type="range" id="minimalOpacitySlider" min="0.12" max="0.95" step="0.01">
                     <span id="minimalOpacityValue"></span>
                 </label>
+                </div>
             </div>
+
+            <div class="minimal-status" id="minimalStatus" aria-live="polite"></div>
 
             <div class="editor-panel" id="editorPanel">
                 <div class="editor-header">
